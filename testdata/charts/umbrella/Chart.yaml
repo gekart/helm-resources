@@ -1,0 +1,10 @@
+apiVersion: v2
+name: umbrella
+description: Fixture umbrella chart for helm-resources golden tests
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: subchart-a
+    version: 0.1.0
+    repository: ""

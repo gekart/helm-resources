@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+      - run: go mod download
+      - run: go build ./...
+      - run: go test ./... -race -coverprofile=coverage.out
+      - name: Enforce coverage floor (aggregate, parse)
+        run: |
+          go tool cover -func=coverage.out | tee coverage.txt
+          for pkg in internal/aggregate internal/parse; do
+            pct=$(awk -v p="github.com/ekartco/helm-resources/${pkg}" '$1 ~ p { gsub("%","",$3); if ($3+0 > 0) { sum+=$3; n++ } } END { if (n>0) printf "%.1f", sum/n; else print "0" }' coverage.txt)
+            echo "$pkg coverage: ${pct}%"
+            awk -v v="$pct" 'BEGIN { exit (v+0 >= 80) ? 0 : 1 }' || { echo "::error::$pkg coverage ${pct}% < 80%"; exit 1; }
+          done
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest

@@ -1,0 +1,24 @@
+# Build output
+bin/
+dist/
+*.tgz
+*.test
+*.exe
+
+# Go tooling
+coverage.out
+coverage.txt
+vendor/
+
+# Local Claude Code state (keep the team-facing CLAUDE.md; ignore per-user settings)
+.claude/settings.local.json
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
