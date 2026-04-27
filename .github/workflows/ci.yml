@@ -19,12 +19,21 @@ jobs:
       - run: go test ./... -race -coverprofile=coverage.out
       - name: Enforce coverage floor (aggregate, parse)
         run: |
-          go tool cover -func=coverage.out | tee coverage.txt
+          # Per-package totals are derived by filtering the merged profile
+          # to lines under each package path and re-running `cover -func`.
+          fail=0
           for pkg in internal/aggregate internal/parse; do
-            pct=$(awk -v p="github.com/ekartco/helm-resources/${pkg}" '$1 ~ p { gsub("%","",$3); if ($3+0 > 0) { sum+=$3; n++ } } END { if (n>0) printf "%.1f", sum/n; else print "0" }' coverage.txt)
+            filtered=$(mktemp)
+            { head -1 coverage.out; grep -F "github.com/gekart/helm-resources/${pkg}/" coverage.out || true; } > "$filtered"
+            pct=$(go tool cover -func="$filtered" | awk '/^total:/ {gsub("%","",$3); print $3}')
+            rm -f "$filtered"
             echo "$pkg coverage: ${pct}%"
-            awk -v v="$pct" 'BEGIN { exit (v+0 >= 80) ? 0 : 1 }' || { echo "::error::$pkg coverage ${pct}% < 80%"; exit 1; }
+            if ! awk -v v="$pct" 'BEGIN { exit (v+0 >= 80) ? 0 : 1 }'; then
+              echo "::error::$pkg coverage ${pct}% < 80%"
+              fail=1
+            fi
           done
+          exit $fail
 
   lint:
     runs-on: ubuntu-latest
