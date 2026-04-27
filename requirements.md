@@ -26,7 +26,7 @@ Helm 4 (released November 2025) introduced a redesigned plugin system supporting
   - `spec.template.spec.initContainers[].resources` (max of init containers, not sum — init containers run sequentially; regular containers run in parallel)
   - Multiply by `spec.replicas` (default 1 if unset)
   - For `CronJob`: use `spec.jobTemplate.spec.template.spec...`; flag as "scheduled" and report per-run totals separately from always-on totals.
-  - For `DaemonSet`: report as "per node" since total depends on node count; accept an optional `--nodes N` flag to multiply.
+  - For `DaemonSet`: by default, query the cluster (via the active kubeconfig context) for the node count and multiply by it. `--nodes N` overrides the lookup; `--local-only` suppresses the lookup and reports per-node. On any lookup failure (no kubeconfig, unreachable, RBAC denied) fall back to per-node and warn to stderr.
 - Normalize units:
   - CPU to millicores (integer)
   - Memory to bytes internally; display with binary prefixes (Ki, Mi, Gi)
@@ -40,7 +40,7 @@ Helm 4 (released November 2025) introduced a redesigned plugin system supporting
 
 ### Out of scope
 
-- Querying a live cluster for actual usage (use `kubectl-view-allocations` or `kube-capacity` for that).
+- Querying a live cluster for actual usage (use `kubectl-view-allocations` or `kube-capacity` for that). The plugin does query the cluster for node *count* by default to multiply DaemonSet totals — see the DaemonSet bullet above.
 - Cost estimation in currency (use `kubecost` or `opencost`).
 - Node-fit / schedulability analysis.
 - HPA-driven scaling projections beyond `spec.replicas` (see "Edge cases" for optional warning).
@@ -90,7 +90,8 @@ helm resources CHART [flags]
 | `-n, --namespace string`   | Release namespace (affects templating, not grouping)                                 |
 | `--group-by string`        | `subchart` \| `kind` \| `namespace` \| `none` (default `subchart`)                   |
 | `-o, --output string`      | `table` \| `json` \| `yaml` \| `csv` (default `table`)                               |
-| `--nodes int`              | Node count for DaemonSet multiplication (default 1, reported as "per node" if unset) |
+| `--nodes int`              | Explicit node count for DaemonSet multiplication; overrides cluster lookup           |
+| `--local-only`             | Skip the cluster query for node count; report DaemonSets per-node                    |
 | `--include-init`           | Count init containers in totals (default `true`)                                     |
 | `--warn-missing`           | Print warnings for containers with no `resources` block (default `true`)             |
 | `--stdin`                  | Read already-rendered manifests from stdin instead of rendering                      |

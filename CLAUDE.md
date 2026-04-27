@@ -19,6 +19,7 @@ Run a single test: `go test ./internal/aggregate -run TestName -v`
 - `internal/render/` — wraps the `helm.sh/helm/v4` SDK to produce manifests
 - `internal/parse/` — YAML → workload model (Deployment, StatefulSet, DaemonSet, Job, CronJob, Pod, ReplicaSet)
 - `internal/aggregate/` — sum logic, unit normalization, grouping
+- `internal/cluster/` — optional Kubernetes API helpers (e.g. node count); cluster contact is best-effort and degrades to per-node on any failure
 - `internal/format/` — table / json / yaml / csv renderers
 
 Data flow: `render → parse → aggregate → format`. Keep these boundaries clean; no format-specific logic in `aggregate`.
@@ -27,7 +28,7 @@ Data flow: `render → parse → aggregate → format`. Keep these boundaries cl
 
 - CPU is millicores (int64) internally; memory is bytes (int64). Convert at the edges only.
 - Init container aggregation uses Kubernetes' effective-request rule: `max(sum(containers), max(initContainers))` per pod — not a naive sum.
-- DaemonSet totals are "per node" unless `--nodes N` is passed. Never assume a node count.
+- DaemonSet node count comes from, in priority: `--nodes N` (explicit) → a live cluster query via the kubeconfig context (default) → per-node fallback when `--local-only` is set or the cluster query fails. Never silently assume `1` — emit a stderr note explaining the source.
 - HPA `maxReplicas` is informational only; totals use `spec.replicas`.
 - Warnings go to stderr, results to stdout. The tool must be pipe-safe.
 - Unknown kinds (CRDs with embedded pod specs, etc.) are skipped with a stderr note, never a hard error.

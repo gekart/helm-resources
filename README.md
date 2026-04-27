@@ -34,9 +34,17 @@ helm resources ./my-umbrella -f values-prod.yaml --group-by none -o json
 # Consume pre-rendered manifests
 helm template my-rel ./my-umbrella | helm resources --stdin
 
-# Multiply DaemonSets by node count
+# Multiply DaemonSets by an explicit node count (overrides cluster lookup)
 helm resources ./my-umbrella --nodes 10
+
+# Skip the cluster query entirely; report DaemonSets per-node
+helm resources ./my-umbrella --local-only
 ```
+
+By default, `helm-resources` queries the cluster pointed to by your kubeconfig
+to count nodes for DaemonSet totals. If the lookup fails (no kubeconfig, no
+network, RBAC denied) it falls back to per-node mode and prints a warning to
+stderr; pass `--local-only` to suppress the lookup, or `--nodes N` to override.
 
 See `requirements.md` for the full spec.
 

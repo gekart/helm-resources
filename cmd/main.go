@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/pflag"
+	"helm.sh/helm/v4/pkg/cli"
 	"helm.sh/helm/v4/pkg/cli/values"
 
 	"github.com/gekart/helm-resources/internal/aggregate"
+	"github.com/gekart/helm-resources/internal/cluster"
 	"github.com/gekart/helm-resources/internal/format"
 	"github.com/gekart/helm-resources/internal/parse"
 	"github.com/gekart/helm-resources/internal/render"
@@ -45,6 +49,7 @@ func run(args []string) error {
 		includeHooks bool
 		showVersion  bool
 		releaseName  string
+		localOnly    bool
 	)
 
 	fs.StringArrayVarP(&valueFiles, "values", "f", nil, "values file(s), same semantics as `helm template`")
@@ -56,7 +61,8 @@ func run(args []string) error {
 	fs.StringVar(&releaseName, "release-name", "release-name", "release name used for templating")
 	fs.StringVar(&groupBy, "group-by", "subchart", "subchart | kind | namespace | none")
 	fs.StringVarP(&output, "output", "o", "table", "table | json | yaml | csv")
-	fs.IntVar(&nodes, "nodes", 0, "node count for DaemonSet multiplication (0 = report per-node)")
+	fs.IntVar(&nodes, "nodes", 0, "explicit node count for DaemonSet multiplication; overrides cluster lookup")
+	fs.BoolVar(&localOnly, "local-only", false, "do not query the cluster for node count; report DaemonSets per-node")
 	fs.BoolVar(&includeInit, "include-init", true, "count init containers in totals")
 	fs.BoolVar(&warnMissing, "warn-missing", true, "print warnings for containers with no resources")
 	fs.BoolVar(&includeHooks, "include-hooks", false, "include helm.sh/hook-annotated workloads in totals")
@@ -125,6 +131,19 @@ func run(args []string) error {
 	}
 	for _, n := range notes {
 		fmt.Fprintln(os.Stderr, "note:", n)
+	}
+
+	// Step 2.5: resolve node count for DaemonSet multiplication. Default is to
+	// query the cluster context; --nodes wins; --local-only suppresses the
+	// query. Failures degrade to per-node with a stderr warning.
+	if !localOnly && !fs.Changed("nodes") {
+		n, err := cluster.CountWithTimeout(context.Background(), cli.New().RESTClientGetter(), 5*time.Second)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not query cluster for node count (%v); reporting DaemonSets per-node — pass --nodes N or --local-only to suppress this lookup\n", err)
+		} else {
+			nodes = n
+			fmt.Fprintf(os.Stderr, "info: using %d nodes from cluster context for DaemonSet totals\n", n)
+		}
 	}
 
 	// Step 3: aggregate.
