@@ -1,6 +1,7 @@
 package aggregate
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/gekart/helm-resources/internal/parse"
@@ -159,6 +160,122 @@ func TestAggregate_ReplicasMultiply(t *testing.T) {
 	}
 	if rep.Grand.Pods != 3 {
 		t.Errorf("pods: got %d, want 3", rep.Grand.Pods)
+	}
+}
+
+// TestBucketKey_AllBranches exercises every grouping mode + empty-value fallbacks.
+func TestBucketKey_AllBranches(t *testing.T) {
+	cases := []struct {
+		name    string
+		w       parse.Workload
+		groupBy string
+		want    string
+	}{
+		{"kind", parse.Workload{Kind: "Deployment"}, "kind", "Deployment"},
+		{"namespace_set", parse.Workload{Namespace: "prod"}, "namespace", "prod"},
+		{"namespace_empty_falls_to_default", parse.Workload{}, "namespace", "default"},
+		{"none", parse.Workload{}, "none", "total"},
+		{"subchart_set", parse.Workload{Chart: "foo"}, "subchart", "foo"},
+		{"subchart_empty_falls_to_root", parse.Workload{}, "subchart", "(root)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := bucketKey(tc.w, tc.groupBy); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestEffectiveReplicas_KindBranches covers Pod, CronJob, and missing-replicas
+// branches.
+func TestEffectiveReplicas_KindBranches(t *testing.T) {
+	cases := []struct {
+		name string
+		w    parse.Workload
+		want int64
+	}{
+		{"pod_always_one", parse.Workload{Kind: "Pod"}, 1},
+		{"cronjob_always_one", parse.Workload{Kind: "CronJob"}, 1},
+		{"deployment_nil_replicas_defaults_to_one", parse.Workload{Kind: "Deployment"}, 1},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			n, _ := effectiveReplicas(tc.w, 0)
+			if n != tc.want {
+				t.Errorf("got %d, want %d", n, tc.want)
+			}
+		})
+	}
+}
+
+// TestPodResources_Limits exercises the limits-only path including the
+// containers-and-init-limits max rule.
+func TestPodResources_Limits(t *testing.T) {
+	w := parse.Workload{
+		Kind: "Deployment",
+		Containers: []parse.Container{
+			{Name: "a", Limits: rv("100m", "256Mi")},
+		},
+		InitContainers: []parse.Container{
+			{Name: "init", Limits: rv("500m", "128Mi")},
+		},
+	}
+	_, lim, _, err := podResources(w, true)
+	if err != nil {
+		t.Fatalf("podResources: %v", err)
+	}
+	if lim.CPUMilli != 500 {
+		t.Errorf("limit cpu: got %d, want 500", lim.CPUMilli)
+	}
+	if lim.MemoryBytes != 256*1024*1024 {
+		t.Errorf("limit mem: got %d, want 256Mi", lim.MemoryBytes)
+	}
+}
+
+// TestPodResources_PodLevelLimitsOnly covers PodLevelResources where only
+// limits are set.
+func TestPodResources_PodLevelLimitsOnly(t *testing.T) {
+	w := parse.Workload{
+		Kind:      "Pod",
+		PodLimits: rv("2", "4Gi"),
+	}
+	_, lim, _, err := podResources(w, true)
+	if err != nil {
+		t.Fatalf("podResources: %v", err)
+	}
+	if lim.CPUMilli != 2000 || lim.MemoryBytes != 4<<30 {
+		t.Errorf("got %+v", lim)
+	}
+}
+
+// TestPodResources_InvalidQuantity propagates parse errors with the right path.
+func TestPodResources_InvalidQuantity(t *testing.T) {
+	w := parse.Workload{
+		Kind:       "Deployment",
+		Containers: []parse.Container{{Name: "bad", Requests: rv("not-a-quantity", "")}},
+	}
+	if _, _, _, err := podResources(w, true); err == nil {
+		t.Error("expected error on invalid quantity, got nil")
+	}
+}
+
+// TestAggregate_InvalidQuantityErrorPath confirms Aggregate wraps the workload
+// path into the error.
+func TestAggregate_InvalidQuantityErrorPath(t *testing.T) {
+	ws := []parse.Workload{
+		{
+			Kind:       "Deployment",
+			Name:       "broken",
+			Containers: []parse.Container{{Name: "c", Requests: rv("xyz", "")}},
+		},
+	}
+	_, err := Aggregate(ws, Options{GroupBy: "none"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "Deployment/broken") {
+		t.Errorf("error should name workload: %v", err)
 	}
 }
 
