@@ -1,17 +1,30 @@
+version: "2"
+
 run:
   timeout: 3m
 
 linters:
-  disable-all: true
+  default: none
   enable:
     - errcheck
-    - gofmt
-    - goimports
     - govet
     - ineffassign
     - staticcheck
     - unused
     - misspell
+  settings:
+    errcheck:
+      # Writes to in-memory tabwriter / stdout in formatters never need
+      # explicit error checks; broken-pipe is handled by SIGPIPE.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
 
 issues:
   exclude-dirs:

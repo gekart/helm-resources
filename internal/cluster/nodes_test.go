@@ -13,7 +13,7 @@ import (
 )
 
 func TestCountNodes(t *testing.T) {
-	cs := fake.NewSimpleClientset(
+	cs := fake.NewClientset(
 		&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "a"}},
 		&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "b"}},
 		&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "c"}},
@@ -28,7 +28,7 @@ func TestCountNodes(t *testing.T) {
 }
 
 func TestCountNodes_Empty(t *testing.T) {
-	cs := fake.NewSimpleClientset()
+	cs := fake.NewClientset()
 	n, err := CountNodes(context.Background(), cs)
 	if err != nil {
 		t.Fatalf("CountNodes: %v", err)
@@ -39,7 +39,7 @@ func TestCountNodes_Empty(t *testing.T) {
 }
 
 func TestCountNodes_APIError(t *testing.T) {
-	cs := fake.NewSimpleClientset()
+	cs := fake.NewClientset()
 	cs.PrependReactor("list", "nodes", func(_ k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("forbidden: user cannot list nodes")
 	})

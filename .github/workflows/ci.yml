@@ -33,6 +33,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25"
-      - uses: golangci/golangci-lint-action@v6
+      # action v8 pairs with golangci-lint v2.x; pinning a version that's
+      # built with Go 1.25+ avoids the `go1.24 < target 1.25` mismatch.
+      - uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
+          version: v2.11.4

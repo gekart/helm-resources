@@ -54,7 +54,7 @@ func Render(opts Options) (string, error) {
 		return "", fmt.Errorf("merge values: %w", err)
 	}
 
-	located, err := inst.ChartPathOptions.LocateChart(opts.ChartPath, settings)
+	located, err := inst.LocateChart(opts.ChartPath, settings)
 	if err != nil {
 		return "", fmt.Errorf("locate chart: %w", err)
 	}
