@@ -52,7 +52,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          helm plugin package staging/helm-resources --destination dist/
+          helm plugin package staging/helm-resources --sign=false --destination dist/
           ls -la dist/
 
       - name: Create GitHub release and upload assets
