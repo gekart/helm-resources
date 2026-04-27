@@ -24,21 +24,15 @@ runtimeConfig:
   platformHooks:
     install:
       - os: linux
-        command: "sh"
-        args: ["${HELM_PLUGIN_DIR}/scripts/install.sh"]
+        command: "${HELM_PLUGIN_DIR}/scripts/install.sh"
       - os: darwin
-        command: "sh"
-        args: ["${HELM_PLUGIN_DIR}/scripts/install.sh"]
+        command: "${HELM_PLUGIN_DIR}/scripts/install.sh"
       - os: windows
-        command: "powershell"
-        args: ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${HELM_PLUGIN_DIR}/scripts/install.ps1"]
+        command: "${HELM_PLUGIN_DIR}/scripts/install.cmd"
     update:
       - os: linux
-        command: "sh"
-        args: ["${HELM_PLUGIN_DIR}/scripts/install.sh"]
+        command: "${HELM_PLUGIN_DIR}/scripts/install.sh"
       - os: darwin
-        command: "sh"
-        args: ["${HELM_PLUGIN_DIR}/scripts/install.sh"]
+        command: "${HELM_PLUGIN_DIR}/scripts/install.sh"
       - os: windows
-        command: "powershell"
-        args: ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${HELM_PLUGIN_DIR}/scripts/install.ps1"]
+        command: "${HELM_PLUGIN_DIR}/scripts/install.cmd"
