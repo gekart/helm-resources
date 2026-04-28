@@ -23,7 +23,6 @@ func renderTable(w io.Writer, rep aggregate.Report) error {
 			g.Totals.Pods,
 		)
 	}
-	fmt.Fprintln(tw, "---")
 	fmt.Fprintf(tw, "TOTAL\t%s\t%s\t%s\t%s\t%d\n",
 		aggregate.FormatCPU(rep.Grand.Requests.CPUMilli),
 		aggregate.FormatCPU(rep.Grand.Limits.CPUMilli),
