@@ -113,7 +113,7 @@ func Parse(r io.Reader, _ ParseOptions) ([]Workload, []string, error) {
 		default:
 			// Skipped kinds (Services, ConfigMaps, CRDs, etc.) — silent unless
 			// it's something we might plausibly be expected to understand.
-			if isMaybePodCarrier(meta.Kind) {
+			if isMaybePodCarrier(meta.Kind, meta.APIVersion) {
 				notes = append(notes, fmt.Sprintf("unknown kind %q (skipped)", meta.Kind))
 			}
 		}
@@ -176,11 +176,16 @@ func splitDocs(buf []byte) ([]rawDoc, error) {
 }
 
 // isMaybePodCarrier returns true for kinds that commonly embed a pod spec; used
-// to surface a skip note rather than silently ignoring them.
-func isMaybePodCarrier(kind string) bool {
+// to surface a skip note rather than silently ignoring them. Core kinds that
+// happen to share a name with a CRD (Service vs Knative Service) are
+// distinguished by apiVersion to avoid noise on every plain k8s manifest.
+func isMaybePodCarrier(kind, apiVersion string) bool {
 	switch kind {
-	case "Rollout", "Service" /* Knative */, "TaskRun", "PipelineRun":
+	case "Rollout", "TaskRun", "PipelineRun":
 		return true
+	case "Service":
+		// Core v1 Services don't carry a pod spec; only flag non-core (Knative).
+		return apiVersion != "" && apiVersion != "v1"
 	}
 	return false
 }

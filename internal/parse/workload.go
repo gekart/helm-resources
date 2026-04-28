@@ -57,8 +57,9 @@ type podDoc struct {
 
 // genericDoc is just enough to dispatch on kind.
 type genericDoc struct {
-	Kind     string     `json:"kind"`
-	Metadata objectMeta `json:"metadata"`
+	APIVersion string     `json:"apiVersion"`
+	Kind       string     `json:"kind"`
+	Metadata   objectMeta `json:"metadata"`
 }
 
 func parseWorkload(body []byte, meta genericDoc, chartHint string) (Workload, error) {

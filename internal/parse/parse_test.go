@@ -273,6 +273,29 @@ data: {}
 	}
 }
 
+// TestParse_CoreServiceSilent confirms ordinary k8s Services don't generate
+// a skip note — they're known not to carry a pod spec, so a note is just
+// noise on every nginx-ingress / generic chart.
+func TestParse_CoreServiceSilent(t *testing.T) {
+	const m = `apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  ports: [{port: 80}]
+`
+	ws, notes, err := Parse(strings.NewReader(m), ParseOptions{})
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if len(ws) != 0 {
+		t.Errorf("workloads: got %d, want 0", len(ws))
+	}
+	if len(notes) != 0 {
+		t.Errorf("notes: want none, got %v", notes)
+	}
+}
+
 // TestParse_PartOfLabelFallback covers resolveChart's app.kubernetes.io/part-of
 // branch when helm.sh/chart is absent.
 func TestParse_PartOfLabelFallback(t *testing.T) {

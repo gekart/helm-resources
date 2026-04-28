@@ -2,6 +2,10 @@
 
 Helm 4 CLI plugin that sums declared CPU/memory requests and limits across a rendered chart. See `requirements.md` for the full spec.
 
+## Instructions to Claude
+
+Claude Code is reponsible for developing, testing, checking in and making sure the code runs before stopping the loop. If Claude is sure it cannot do the task autonomosly, it should ask for options, instructions, help from the user.
+
 ## Commands
 
 ```bash
