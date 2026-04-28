@@ -1,5 +1,5 @@
 name: resources
-version: 0.1.0
+version: 0.1.1
 type: cli/v1
 apiVersion: v1
 runtime: subprocess
